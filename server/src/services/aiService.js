@@ -1,11 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 
+const mcqSchema = {
+  type: "OBJECT",
+  properties: {
+    prompt: { type: "STRING" },
+    options: { type: "ARRAY", items: { type: "STRING" } },
+    correctAnswerIndex: { type: "INTEGER" },
+    explanation: { type: "STRING" },
+    topic: { type: "STRING" }
+  },
+  required: ["prompt", "options", "correctAnswerIndex", "explanation", "topic"]
+};
+
 const assessmentSchema = {
   type: "OBJECT",
   properties: {
-    vocabulary: { type: "ARRAY", items: { $ref: "#/$defs/mcq" } },
-    reasoning: { type: "ARRAY", items: { $ref: "#/$defs/mcq" } },
-    arithmetic: { type: "ARRAY", items: { $ref: "#/$defs/mcq" } },
+    vocabulary: { type: "ARRAY", items: mcqSchema },
+    reasoning: { type: "ARRAY", items: mcqSchema },
+    arithmetic: { type: "ARRAY", items: mcqSchema },
     coding: {
       type: "OBJECT",
       properties: {
@@ -21,20 +33,7 @@ const assessmentSchema = {
       required: ["title", "difficulty", "statement", "input", "output", "constraints", "starter", "explanation"]
     }
   },
-  required: ["vocabulary", "reasoning", "arithmetic", "coding"],
-  $defs: {
-    mcq: {
-      type: "OBJECT",
-      properties: {
-        prompt: { type: "STRING" },
-        options: { type: "ARRAY", items: { type: "STRING" } },
-        correctAnswerIndex: { type: "INTEGER" },
-        explanation: { type: "STRING" },
-        topic: { type: "STRING" }
-      },
-      required: ["prompt", "options", "correctAnswerIndex", "explanation", "topic"]
-    }
-  }
+  required: ["vocabulary", "reasoning", "arithmetic", "coding"]
 };
 
 function validateMcqs(questions, section) {
