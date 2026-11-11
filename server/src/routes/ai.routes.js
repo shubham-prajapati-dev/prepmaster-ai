@@ -1,41 +1,24 @@
 import { Router } from "express";
-import { generateVocabularyQuestions } from "../services/aiService.js";
+import { generateAssessment } from "../services/aiService.js";
 
 const router = Router();
 
-router.post("/generate-vocabulary", async (req, res) => {
-  const difficulty = req.body?.difficulty ?? "easy";
-
+router.post("/generate-assessment", async (req, res) => {
+  const difficulty = req.body?.difficulty ?? "medium";
   if (!["easy", "medium", "hard"].includes(difficulty)) {
-    return res.status(400).json({
-      success: false,
-      message: "Difficulty must be easy, medium, or hard.",
-    });
+    return res.status(400).json({ success: false, message: "Difficulty must be easy, medium, or hard." });
   }
-
   try {
-    const questions = await generateVocabularyQuestions(difficulty);
-
-    return res.json({
-      success: true,
-      total: questions.length,
-      difficulty,
-      questions,
-    });
+    const assessment = await generateAssessment(difficulty);
+    return res.json({ success: true, difficulty, assessment });
   } catch (error) {
-    // Keep provider details in the server logs, never in the public response.
-    console.error("Gemini question generation failed:", {
-      message: error?.message,
-      status: error?.status,
-      code: error?.code,
+    console.error("Gemini assessment generation failed:", {
+      message: error?.message, status: error?.status, code: error?.code
     });
-
-    const isConfigurationError = error?.code === "GEMINI_KEY_MISSING";
-    return res.status(isConfigurationError ? 503 : 502).json({
+    const missingKey = error?.code === "GEMINI_KEY_MISSING";
+    return res.status(missingKey ? 503 : 502).json({
       success: false,
-      message: isConfigurationError
-        ? "AI question generation is not configured."
-        : "Question generation is temporarily unavailable. Check the server logs.",
+      message: missingKey ? "AI question generation is not configured on the server." : "Gemini could not prepare this assessment. Please try again."
     });
   }
 });
