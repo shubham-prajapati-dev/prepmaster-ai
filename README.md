@@ -1,54 +1,65 @@
 # PrepMaster AI
 
-A personal daily placement-practice platform. Phase 1 includes a responsive React dashboard and an Express API health endpoint. The repository also includes the planned MongoDB schemas and architecture notes for subsequent phases.
+AI-powered daily placement assessment platform.
 
 ## Stack
-- Frontend: React + Vite
-- Backend: Node.js + Express
-- Database: MongoDB + Mongoose
-- AI: OpenAI Responses API (server-side only)
-- Coding evaluation (later phase): isolated Judge0-compatible execution service
+- React + Vite
+- Node.js + Express
+- MongoDB + Mongoose
+- OpenAI API (planned integration)
 
-## Requirements
-- Node.js 20+
-- MongoDB local instance or MongoDB Atlas connection string
+## Phase 2: Run the application
 
-## Run locally
+### 1. Prerequisites
+- Node.js 20 or newer
+- MongoDB running locally, or a MongoDB Atlas connection string
 
-### 1. Backend
+### 2. Install dependencies
+Run this from the project root (the folder containing this README and package.json):
+
 ```bash
-cd server
-cp .env.example .env
 npm install
+```
+
+The root package uses npm workspaces, so this installs both frontend and backend dependencies.
+
+### 3. Configure the backend
+Copy `server/.env.example` to `server/.env`, then set:
+
+```env
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017/prepmaster_ai
+CLIENT_URL=http://localhost:5173
+```
+
+Do not add your OpenAI key to the React client. It will be configured on the server when AI integration is implemented.
+
+### 4. Start both applications
+From the project root:
+
+```bash
 npm run dev
 ```
-Set `MONGODB_URI` in `server/.env`. `OPENAI_API_KEY` is not needed for Phase 1.
 
-### 2. Frontend
+- Frontend: http://localhost:5173
+- Backend health check: http://localhost:5000/api/health
+
+You can also run only one service:
 ```bash
-cd client
-npm install
-npm run dev
+npm run dev:client
+npm run dev:server
 ```
-Open the Vite URL, usually http://localhost:5173.
 
-## Phase 1 scope
-- Dashboard layout and navigation
-- Daily test overview: 10 vocabulary, 10 reasoning, 10 arithmetic/logical, 1 coding
-- Section timing overview
-- Recent activity and progress visual placeholders clearly marked as not yet populated
-- Backend health endpoint
+## Phase 2 features
+- 10 vocabulary MCQs
+- 10 reasoning MCQs
+- 10 arithmetic/logical MCQs
+- 1 C++ coding prompt
+- Section-specific countdown timers
+- Question palette and navigation
+- Mark for review
+- Automatic section progression when time expires
+- MCQ score summary
 
-## Planned phases
-1. Dashboard and application foundation (current)
-2. Daily test lifecycle and section timer
-3. OpenAI question generation with structured outputs and validation
-4. Submission, scoring, and result explanations
-5. Coding editor and sandboxed code evaluation
-6. History, analytics, adaptive difficulty, and deployment
-
-## Security notes
-- Never put the OpenAI API key in the client app.
-- Do not execute submitted code inside the Express process or on the application host.
-- Keep answer keys on the server; only send question text and options to the browser during an active test.
-- Enforce test deadlines on the server, not only with a browser timer.
+## Current limitations
+This phase uses a local demonstration question bank. AI question generation, secure server-side scoring, code execution, persistent attempts, and adaptive difficulty will be added in later phases. The coding editor currently stores the submitted code in the browser session; it does not compile or execute code yet.
