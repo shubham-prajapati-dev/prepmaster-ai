@@ -75,7 +75,7 @@ export async function generateVocabularyQuestions(difficulty = "easy") {
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-flash-latest",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
     contents: `
       You are an expert placement examination question setter.
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { generateVocabularyQuestions } from '../services/api.js';
 import {
   Activity, ArrowLeft, ArrowRight, BookOpen, Brain, CalendarDays, CheckCircle2,
   ChevronDown, CircleHelp, Clock3, Code2, Flame, LayoutDashboard, ListChecks,
@@ -51,6 +52,10 @@ const bank = {
  ]
 };
 
+function toQuestionRows(questions) {
+  return questions.map((question) => [question.prompt, question.options, question.correctAnswerIndex, question.explanation, question.topic]);
+}
+
 const codingQuestion = {
  title:'Two Sum',
  difficulty:'Easy',
@@ -86,9 +91,12 @@ export default function App(){
  const [submitted,setSubmitted]=useState(false);
  const [sectionDone,setSectionDone]=useState({});
  const [startedAt,setStartedAt]=useState(null);
+ const [vocabularyQuestions,setVocabularyQuestions]=useState(bank.vocabulary);
+ const [isStarting,setIsStarting]=useState(false);
+ const [startError,setStartError]=useState('');
 
  const current=sections[activeSection];
- const questions=current.id==='coding'?[codingQuestion]:bank[current.id];
+ const questions=current.id==='coding'?[codingQuestion]:current.id==='vocabulary'?vocabularyQuestions:bank[current.id];
  const answerKey=`${current.id}-${questionIndex}`;
  const answeredCount=Object.keys(answers).length;
  const total=31;
@@ -122,12 +130,23 @@ export default function App(){
    if(key.startsWith('coding-')) return;
    attempted++;
    const [sectionId,indexText]=key.split('-');
-   if(bank[sectionId]?.[Number(indexText)]?.[2]===val) correct++;
+   const questionSet=sectionId==='vocabulary'?vocabularyQuestions:bank[sectionId];
+   if(questionSet?.[Number(indexText)]?.[2]===val) correct++;
   });
   return {correct,attempted,marks:correct};
- },[answers]);
+ },[answers,vocabularyQuestions]);
 
- function startTest(){setStarted(true);setSubmitted(false);setView('test');setStartedAt(Date.now());}
+ async function startTest(){
+  setIsStarting(true);setStartError('');
+  try {
+   const response=await generateVocabularyQuestions();
+   if(!response?.success || !Array.isArray(response.questions) || response.questions.length!==10) throw new Error('The AI service returned an unexpected question set. Please try again.');
+   setVocabularyQuestions(toQuestionRows(response.questions));
+   setAnswers({});setMarked({});setCode(codingQuestion.starter);setRemaining(sections.map(s=>s.seconds));setActiveSection(0);setQuestionIndex(0);setSectionDone({});
+   setSubmitted(false);setStarted(true);setView('test');setStartedAt(Date.now());
+  } catch(error) { setStartError(error.message || 'Unable to load AI questions. Please try again.'); }
+  finally { setIsStarting(false); }
+ }
  function choose(value){setAnswers(prev=>({...prev,[answerKey]:value}));}
  function toggleMark(){setMarked(prev=>({...prev,[answerKey]:!prev[answerKey]}));}
  function advanceSection(auto=false){
@@ -147,10 +166,10 @@ export default function App(){
    <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{view==='dashboard'?'Dashboard':view==='test'?'Daily assessment':'Results'}</strong></div><div className="top-actions"><div className="today-chip"><CalendarDays size={15}/> Daily practice</div><div className="avatar">S</div><div className="profile-name"><strong>My workspace</strong><span>Personal account</span></div><ChevronDown size={16} className="muted-icon"/></div></header>
    {view==='dashboard'&&<div className="page-wrap">
     <section className="welcome-row"><div><div className="eyebrow">DAILY PLACEMENT PRACTICE</div><h1>Good morning. Ready to improve?</h1><p>Your daily placement practice is ready when you are. One focused session at a time.</p></div><div className="streak-pill"><Flame size={17}/><strong>Build your streak</strong><span>Start today</span></div></section>
-    <section className="hero-card"><div className="hero-content"><div className="live-label"><span className="live-dot"/> DAILY ASSESSMENT</div><h2>Today's placement test</h2><p>Four focused sections. One complete picture of your preparation.</p><div className="hero-stats"><div><strong>31</strong><span>Total questions</span></div><div><strong>75 min</strong><span>Estimated duration</span></div><div><strong>50</strong><span>Maximum marks</span></div></div><button className="primary-button" onClick={startTest}>Start today's test <ArrowRight size={17}/></button></div><div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="paper-card"><div className="paper-top"><span/><span/><span/></div><div className="paper-line wide"/><div className="paper-line"/><div className="paper-option selected"><CheckCircle2 size={14}/> Answer selected</div><div className="paper-line short"/><div className="paper-option"><span className="empty-circle"/> Next question</div></div><div className="floating-score"><Trophy size={17}/><div><strong>50 marks</strong><span>Available today</span></div></div></div></section>
+    <section className="hero-card"><div className="hero-content"><div className="live-label"><span className="live-dot"/> DAILY ASSESSMENT</div><h2>Today's placement test</h2><p>Four focused sections. One complete picture of your preparation.</p><div className="hero-stats"><div><strong>31</strong><span>Total questions</span></div><div><strong>75 min</strong><span>Estimated duration</span></div><div><strong>50</strong><span>Maximum marks</span></div></div><button className="primary-button" onClick={startTest} disabled={isStarting}>{isStarting?'Generating your test…':"Start today's test"} {!isStarting&&<ArrowRight size={17}/>}</button>{startError&&<p className="start-error" role="alert">{startError}</p>}</div><div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="paper-card"><div className="paper-top"><span/><span/><span/></div><div className="paper-line wide"/><div className="paper-line"/><div className="paper-option selected"><CheckCircle2 size={14}/> Answer selected</div><div className="paper-line short"/><div className="paper-option"><span className="empty-circle"/> Next question</div></div><div className="floating-score"><Trophy size={17}/><div><strong>50 marks</strong><span>Available today</span></div></div></div></section>
     <section className="section-heading"><div><div className="eyebrow">YOUR TEST BREAKDOWN</div><h2>Four sections. One daily goal.</h2></div><span className="total-tag">31 questions total</span></section>
     <section className="section-list">{sections.map(s=><div className="section-card" key={s.id}><div className={`section-icon ${s.tone}`}><s.icon size={19}/></div><div className="section-copy"><strong>{s.name}</strong><span>{s.detail}</span></div><div className="section-meta"><strong>{s.count}</strong><span>questions</span></div><div className="section-time"><Clock3 size={14}/>{Math.round(s.seconds/60)} min</div></div>)}</section>
-    <section className="lower-grid"><div className="panel progress-panel"><div className="panel-heading"><div><h3>Preparation overview</h3><p>Your progress will appear here after your first test.</p></div><TrendingUp size={19}/></div><div className="empty-state"><div className="empty-icon"><Activity size={22}/></div><strong>Your progress starts with one test</strong><span>Complete today's assessment to unlock scores, accuracy and topic-level insights.</span></div></div><div className="panel adaptive-panel"><div className="adaptive-icon"><Brain size={20}/></div><div className="eyebrow">ADAPTIVE PRACTICE</div><h3>Questions that grow with you.</h3><p>Difficulty will adapt as your accuracy improves. This initial test uses a demo question bank.</p><div className="difficulty-track"><span className="easy">Easy</span><i/><span className="medium">Medium</span><i/><span className="hard">Hard</span></div></div></section>
+    <section className="lower-grid"><div className="panel progress-panel"><div className="panel-heading"><div><h3>Preparation overview</h3><p>Your progress will appear here after your first test.</p></div><TrendingUp size={19}/></div><div className="empty-state"><div className="empty-icon"><Activity size={22}/></div><strong>Your progress starts with one test</strong><span>Complete today's assessment to unlock scores, accuracy and topic-level insights.</span></div></div><div className="panel adaptive-panel"><div className="adaptive-icon"><Brain size={20}/></div><div className="eyebrow">ADAPTIVE PRACTICE</div><h3>Questions that grow with you.</h3><p>Vocabulary questions are generated by Gemini when you start. Reasoning and arithmetic currently use the included practice bank.</p><div className="difficulty-track"><span className="easy">Easy</span><i/><span className="medium">Medium</span><i/><span className="hard">Hard</span></div></div></section>
     <footer className="footer"><span>© 2026 PrepMaster AI</span><span>Phase 2 · Examination engine preview</span></footer>
    </div>}
    {view==='test'&&started&&!submitted&&<div className="exam-wrap">
@@ -166,7 +185,7 @@ export default function App(){
      <aside className="question-nav panel"><div className="nav-panel-title"><strong>Question palette</strong><span>{sectionProgress}/{questions.length} answered</span></div><div className="question-grid">{questions.map((_,i)=><button key={i} className={`q-number ${questionIndex===i?'current':''} ${answers[`${current.id}-${i}`]!==undefined?'answered':''} ${marked[`${current.id}-${i}`]?'flagged':''}`} onClick={()=>selectQuestion(i)}>{i+1}</button>)}</div><div className="legend"><span><i className="legend-current"/>Current</span><span><i className="legend-answered"/>Answered</span><span><i className="legend-flagged"/>Review</span></div><div className="section-switch"><strong>Sections</strong>{sections.map((s,i)=><div key={s.id} className={`switch-row ${i===activeSection?'active':''} ${sectionDone[s.id]?'done':''}`}><span>{i+1}. {s.name}</span><small>{sectionDone[s.id]?'Completed':i<activeSection?'Submitted':`${Math.round(s.seconds/60)} min`}</small></div>)}</div><button className="submit-test-button" onClick={submitConfirm}><Send size={15}/> Submit entire test</button></aside>
     </div>
    </div>}
-   {view==='results'&&submitted&&<div className="page-wrap results-wrap"><div className="eyebrow">ASSESSMENT COMPLETE</div><h1>Your test summary</h1><p className="results-subtitle">Here is your performance for this practice session.</p><div className="result-hero"><div><span>MCQ SCORE</span><strong>{score.marks}<i>/30</i></strong><small>{score.correct} correct · {score.attempted-score.correct} incorrect · {30-score.attempted} unattempted</small></div><div className="result-medal"><Trophy size={32}/></div></div><div className="result-cards"><div className="panel"><span>MCQ ACCURACY</span><strong>{score.attempted?Math.round(score.correct/score.attempted*100):0}%</strong></div><div className="panel"><span>ATTEMPTED</span><strong>{score.attempted}/30</strong></div><div className="panel"><span>CODING</span><strong>{code.trim()===codingQuestion.starter.trim()?'Not attempted':'Submitted'}</strong></div></div><div className="panel result-detail"><h3>Section breakdown</h3>{sections.map(s=><div className="result-row" key={s.id}><span>{s.name}</span><strong>{s.id==='coding'?(code.trim()===codingQuestion.starter.trim()?'Not submitted':'Pending evaluation'):`${bank[s.id].filter((q,i)=>answers[`${s.id}-${i}`]===q[2]).length}/${s.count} correct`}</strong></div>)}</div><div className="results-actions"><button className="primary-blue-button" onClick={resetTest}><RotateCcw size={15}/> Back to dashboard</button></div><p className="demo-disclaimer">Demo assessment: questions are currently local sample data. AI question generation, server-side scoring and persistent history will be connected in upcoming phases.</p></div>}
+   {view==='results'&&submitted&&<div className="page-wrap results-wrap"><div className="eyebrow">ASSESSMENT COMPLETE</div><h1>Your test summary</h1><p className="results-subtitle">Here is your performance for this practice session.</p><div className="result-hero"><div><span>MCQ SCORE</span><strong>{score.marks}<i>/30</i></strong><small>{score.correct} correct · {score.attempted-score.correct} incorrect · {30-score.attempted} unattempted</small></div><div className="result-medal"><Trophy size={32}/></div></div><div className="result-cards"><div className="panel"><span>MCQ ACCURACY</span><strong>{score.attempted?Math.round(score.correct/score.attempted*100):0}%</strong></div><div className="panel"><span>ATTEMPTED</span><strong>{score.attempted}/30</strong></div><div className="panel"><span>CODING</span><strong>{code.trim()===codingQuestion.starter.trim()?'Not attempted':'Submitted'}</strong></div></div><div className="panel result-detail"><h3>Section breakdown</h3>{sections.map(s=><div className="result-row" key={s.id}><span>{s.name}</span><strong>{s.id==='coding'?(code.trim()===codingQuestion.starter.trim()?'Not submitted':'Pending evaluation'):`${(s.id==='vocabulary'?vocabularyQuestions:bank[s.id]).filter((q,i)=>answers[`${s.id}-${i}`]===q[2]).length}/${s.count} correct`}</strong></div>)}</div><div className="results-actions"><button className="primary-blue-button" onClick={resetTest}><RotateCcw size={15}/> Back to dashboard</button></div><section className="panel answer-review"><h3>Answer explanations</h3><p>Review your answers and explanations after completing the test.</p>{sections.filter(s=>s.id!=='coding').map(s=>{const rows=s.id==='vocabulary'?vocabularyQuestions:bank[s.id];return <div className="review-section" key={s.id}><h4>{s.name}</h4>{rows.map((q,i)=>{const selected=answers[`${s.id}-${i}`];return <details className="review-item" key={`${s.id}-${i}`}><summary>Q{i+1}. {q[0]}</summary><div className="review-answer"><span>Your answer: {selected===undefined?'Not attempted':q[1][selected]}</span><strong>Correct answer: {q[1][q[2]]}</strong><p>{q[3]}</p>{q[4]&&<small>Topic: {q[4]}</small>}</div></details>;})}</div>;})}</section></div>}
   </main>
  </div>;
 }
