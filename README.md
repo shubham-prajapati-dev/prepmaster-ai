@@ -1,65 +1,92 @@
 # PrepMaster AI
 
-AI-powered daily placement assessment platform.
+A personal daily placement-practice platform with a React dashboard, Express API, MongoDB persistence foundation, and Gemini-powered vocabulary generation.
 
 ## Stack
-- React + Vite
-- Node.js + Express
-- MongoDB + Mongoose
-- OpenAI API (planned integration)
 
-## Phase 2: Run the application
+- Frontend: React + Vite
+- Backend: Node.js + Express (ES modules)
+- Database: MongoDB + Mongoose
+- AI provider: Google Gemini via the official `@google/genai` SDK
 
-### 1. Prerequisites
-- Node.js 20 or newer
-- MongoDB running locally, or a MongoDB Atlas connection string
+## Prerequisites
 
-### 2. Install dependencies
-Run this from the project root (the folder containing this README and package.json):
+- Node.js 22 or newer
+- npm
+- MongoDB running locally or a MongoDB Atlas connection string
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/api-keys)
+
+## Install
+
+Run from the repository root:
 
 ```bash
 npm install
 ```
 
-The root package uses npm workspaces, so this installs both frontend and backend dependencies.
+The root package uses npm workspaces to install the client and server.
 
-### 3. Configure the backend
-Copy `server/.env.example` to `server/.env`, then set:
+## Configure the backend
+
+Copy `server/.env.example` to `server/.env` and fill in your own values:
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/prepmaster_ai
-CLIENT_URL=http://localhost:5173
+CLIENT_ORIGIN=http://localhost:5173
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-flash-latest
 ```
 
-Do not add your OpenAI key to the React client. It will be configured on the server when AI integration is implemented.
+Never commit `server/.env`, put the Gemini key in the React client, or expose the key in browser code. The backend loads `server/.env` by an explicit path, so the root workspace command works consistently.
 
-### 4. Start both applications
-From the project root:
+## Run both applications
+
+From the repository root:
 
 ```bash
 npm run dev
 ```
 
 - Frontend: http://localhost:5173
-- Backend health check: http://localhost:5000/api/health
+- API health: http://localhost:5000/api/health
+- Database health: http://localhost:5000/api/health/db
 
-You can also run only one service:
+To run one service:
+
 ```bash
 npm run dev:client
 npm run dev:server
 ```
 
-## Phase 2 features
-- 10 vocabulary MCQs
-- 10 reasoning MCQs
-- 10 arithmetic/logical MCQs
-- 1 C++ coding prompt
-- Section-specific countdown timers
-- Question palette and navigation
-- Mark for review
-- Automatic section progression when time expires
-- MCQ score summary
+The backend connects to MongoDB before opening its HTTP port. If MongoDB is unavailable or `MONGODB_URI` is missing, startup fails with a visible error instead of reporting a misleading healthy API.
 
-## Current limitations
-This phase uses a local demonstration question bank. AI question generation, secure server-side scoring, code execution, persistent attempts, and adaptive difficulty will be added in later phases. The coding editor currently stores the submitted code in the browser session; it does not compile or execute code yet.
+## Current implementation
+
+- React dashboard and section-based assessment UI
+- Local demo question bank: 10 vocabulary, 10 reasoning, 10 arithmetic/logical MCQs
+- One C++ coding prompt (editor only; no execution)
+- Section timers, question navigation, mark-for-review, and local MCQ scoring
+- Backend MongoDB models for questions, daily tests, user profiles, and attempts
+- Gemini API endpoint for generating 10 vocabulary MCQs with structured JSON output and server-side shape validation
+
+## Known limitations
+
+- The dashboard currently uses its local demonstration question bank; it is not yet connected to generated Gemini questions or persisted MongoDB tests.
+- The current MCQ result calculation runs in the browser and must be moved to the backend before production use.
+- Coding submissions are not compiled or executed. Do not execute user code directly on the Express server; integrate a separate isolated judge service when adding this feature.
+- Authentication, server-authoritative timing, attempt persistence, adaptive difficulty, and analytics are not yet implemented.
+- AI-generated questions still require semantic quality review; schema validation alone cannot guarantee that the selected answer is correct.
+
+## Gemini test endpoint
+
+With the server running, send:
+
+```http
+POST http://localhost:5000/api/ai/generate-vocabulary
+Content-Type: application/json
+
+{"difficulty":"easy"}
+```
+
+The endpoint returns ten questions when Gemini generation succeeds. Provider-specific errors are logged on the server; the API response intentionally does not expose internal error details.

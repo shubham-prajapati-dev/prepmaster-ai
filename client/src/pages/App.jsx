@@ -96,20 +96,25 @@ export default function App(){
  const currentAnswer=answers[answerKey];
 
  useEffect(()=>{
-  if(!started||submitted||sectionDone[current.id]) return;
-  const timer=setInterval(()=>{
-   setRemaining(prev=>{
-    const next=[...prev];
-    if(next[activeSection]>0) next[activeSection]-=1;
-    if(next[activeSection]===0){
-     clearInterval(timer);
-     setTimeout(()=>advanceSection(true),0);
-    }
-    return next;
-   });
-  },1000);
-  return ()=>clearInterval(timer);
- },[started,submitted,activeSection,sectionDone,current.id]);
+  if(!started || submitted || remaining[activeSection] <= 0) return;
+  const timer = setInterval(() => {
+   setRemaining(prev => prev.map((value, index) =>
+    index === activeSection ? Math.max(0, value - 1) : value
+   ));
+  }, 1000);
+  return () => clearInterval(timer);
+ },[started,submitted,activeSection]);
+
+ useEffect(()=>{
+  if(!started || submitted || remaining[activeSection] > 0) return;
+  setSectionDone(prev => ({ ...prev, [current.id]: true }));
+  if(activeSection === sections.length - 1){
+   finishTest();
+  } else {
+   setActiveSection(index => index + 1);
+   setQuestionIndex(0);
+  }
+ },[remaining,activeSection,started,submitted,current.id]);
 
  const score=useMemo(()=>{
   let correct=0,attempted=0;
