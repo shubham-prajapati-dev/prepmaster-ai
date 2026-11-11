@@ -103,7 +103,7 @@ export default function App(){
    ));
   }, 1000);
   return () => clearInterval(timer);
- },[started,submitted,activeSection,remaining]);
+ },[started,submitted,activeSection]);
 
  useEffect(()=>{
   if(!started || submitted || remaining[activeSection] > 0) return;
