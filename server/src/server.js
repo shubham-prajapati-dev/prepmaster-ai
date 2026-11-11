@@ -1,12 +1,17 @@
-import 'dotenv/config';
-import app from './app.js';
-import { connectDatabase } from './config/db.js';
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const port = Number(process.env.PORT || 5000);
-try {
-  await connectDatabase();
-  app.listen(port, () => console.log(`PrepMaster API listening on http://localhost:${port}`));
-} catch (error) {
-  console.error('Server startup failed:', error.message);
-  process.exit(1);
-}
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({
+  path: path.resolve(currentDir, "../.env"),
+});
+
+const { default: app } = await import("./app.js");
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`PrepMaster API listening on http://localhost:${PORT}`);
+});
