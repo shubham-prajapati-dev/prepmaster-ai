@@ -1,6 +1,6 @@
 # PrepMaster AI
 
-A personal daily placement-practice platform with a React dashboard, Express API, MongoDB persistence foundation, and Gemini-powered vocabulary generation.
+A personal daily placement-practice platform with a React dashboard, Express API, MongoDB persistence foundation, and Gemini-generated daily assessments.
 
 ## Stack
 
@@ -68,12 +68,13 @@ The backend connects to MongoDB before opening its HTTP port. If MongoDB is unav
 - One C++ coding prompt (editor only; no execution)
 - Section timers, question navigation, mark-for-review, and local MCQ scoring
 - Backend MongoDB models for questions, daily tests, user profiles, and attempts
-- Gemini API endpoint for generating 10 vocabulary MCQs with structured JSON output and server-side shape validation
-- The assessment starts immediately with the bundled question bank; Gemini generation is available through the backend API but does not block the exam startup
+- Gemini generates 10 vocabulary, 10 reasoning, 10 arithmetic MCQs and one C++ coding prompt in a single structured assessment response
+- The dashboard prepares the next Gemini assessment in the background; starting the test never waits for the Gemini request
+- If Gemini or the backend is unavailable, the app falls back to the bundled local question bank
 
 ## Known limitations
 
-- The current timed assessment uses the bundled local question bank so the test starts immediately. The Gemini endpoint is available for a later non-blocking integration.
+- Gemini question generation requires a working backend and a valid server-side `GEMINI_API_KEY`; the dashboard displays whether fresh AI questions are ready or the local backup will be used.
 - The current MCQ result calculation runs in the browser and must be moved to the backend before production use.
 - Coding submissions are not compiled or executed. Do not execute user code directly on the Express server; integrate a separate isolated judge service when adding this feature.
 - Authentication, server-authoritative timing, attempt persistence, adaptive difficulty, and analytics are not yet implemented.
@@ -85,10 +86,10 @@ The backend connects to MongoDB before opening its HTTP port. If MongoDB is unav
 With the server running, send:
 
 ```http
-POST http://localhost:5000/api/ai/generate-vocabulary
+POST http://localhost:5000/api/ai/generate-assessment
 Content-Type: application/json
 
 {"difficulty":"easy"}
 ```
 
-The endpoint returns ten questions when Gemini generation succeeds. Provider-specific errors are logged on the server; the API response intentionally does not expose internal error details.
+Send `{"difficulty":"medium"}` as the JSON body. The endpoint returns the full assessment (10 questions per MCQ section and one coding prompt) when Gemini generation succeeds. Provider-specific errors are logged on the server; the API response intentionally does not expose internal error details.
