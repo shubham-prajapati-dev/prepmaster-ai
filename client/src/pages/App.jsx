@@ -101,7 +101,10 @@ export default function App(){
  const currentAnswer=answers[answerKey];
 
  useEffect(()=>{
+  // Keep one fresh Gemini assessment queued; prepare another after the current one is used.
+  if(preparedAssessment) return;
   let cancelled=false;
+  setAiStatus('Preparing fresh Gemini questions...');
   generateAssessment('medium').then(data=>{
    if(cancelled) return;
    const toRows=items=>items.map(q=>[q.prompt,q.options,q.correctAnswerIndex,q.explanation,q.topic]);
@@ -111,10 +114,10 @@ export default function App(){
    });
    setAiStatus('Fresh Gemini assessment is ready.');
   }).catch(error=>{
-   if(!cancelled) setAiStatus('Gemini unavailable — a local backup test is ready. ' + error.message);
+   if(!cancelled) setAiStatus('Gemini unavailable — local backup questions will be used. ' + error.message);
   });
   return ()=>{cancelled=true;};
- },[]);
+ },[preparedAssessment]);
 
  useEffect(()=>{
   if(!started || submitted || remaining[activeSection] <= 0) return;
