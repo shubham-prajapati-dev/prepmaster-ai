@@ -1,6 +1,7 @@
 
 import express from "express";
 import cors from "cors";
+import mongoose from "mongoose";
 import healthRoutes from "./routes/health.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 
@@ -13,9 +14,12 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    app: "PrepMaster AI API"
+  const databaseConnected = mongoose.connection.readyState === 1;
+
+  res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? "ok" : "degraded",
+    app: "PrepMaster AI API",
+    database: databaseConnected ? "connected" : "disconnected",
   });
 });
 
