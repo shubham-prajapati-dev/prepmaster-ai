@@ -5,16 +5,12 @@ const questionSchema = {
   properties: {
     questions: {
       type: "ARRAY",
-      minItems: 10,
-      maxItems: 10,
       items: {
         type: "OBJECT",
         properties: {
           prompt: { type: "STRING" },
           options: {
             type: "ARRAY",
-            minItems: 4,
-            maxItems: 4,
             items: { type: "STRING" },
           },
           correctAnswerIndex: { type: "INTEGER" },
